@@ -2,26 +2,40 @@ package com.teamawesome.hotpotato;
 
 import static com.teamawesome.hotpotato.Utilities.EXTRA_MESSAGE;
 import static com.teamawesome.hotpotato.Utilities.SENDER_ID;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+
+import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.LauncherActivity.ListItem;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
-import android.media.Ringtone;
-import android.media.RingtoneManager;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Vibrator;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.ArrayAdapter;
+import android.widget.ExpandableListView;
+import android.widget.ExpandableListView.OnChildClickListener;
+import android.widget.ListAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gcm.GCMRegistrar;
+import com.teamawesome.hotpotato.list.ExpandListAdapter;
+import com.teamawesome.hotpotato.list.ExpandListChild;
+import com.teamawesome.hotpotato.list.ExpandListGroup;
 
 public class MainActivity extends Activity {
 
@@ -35,6 +49,8 @@ public class MainActivity extends Activity {
 		setContentView(R.layout.activity_main);
 		cd = new ConnectionDetector(getApplicationContext());
 
+		setupList();
+		
 		if (!cd.isConnectingToInternet()) {
 			return;
 		}
@@ -46,8 +62,6 @@ public class MainActivity extends Activity {
 		 * developing the app, then uncomment it when it's ready.
 		 */
 		// GCMRegistrar.checkManifest(this);
-
-		lblMessage = (TextView) findViewById(R.id.messageLabel);
 
 		// registerReceiver(mHandleMessageReceiver, new IntentFilter(
 		// DISPLAY_MESSAGE_ACTION));
@@ -90,17 +104,18 @@ public class MainActivity extends Activity {
 				mRegisterTask.execute(null, null, null);
 			}
 		}
-		AudioManager audio = (AudioManager) getApplicationContext()
-				.getSystemService(Context.AUDIO_SERVICE);
-		int max = audio.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION);
-		audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
-		audio.setStreamVolume(AudioManager.STREAM_RING, max,
-				AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
-		MediaPlayer player = MediaPlayer.create(this,
-				Settings.System.DEFAULT_NOTIFICATION_URI);
-		player.start();
-		Vibrator myVib = (Vibrator) this.getSystemService(VIBRATOR_SERVICE);
-		myVib.vibrate(10000);
+		/*
+		 * AudioManager audio = (AudioManager) getApplicationContext()
+		 * .getSystemService(Context.AUDIO_SERVICE); int max =
+		 * audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+		 * audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+		 * audio.setStreamVolume(AudioManager.STREAM_MUSIC, max,
+		 * AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE); MediaPlayer player =
+		 * MediaPlayer.create(this, Settings.System.DEFAULT_NOTIFICATION_URI);
+		 * player.setLooping(true); player.start(); Vibrator myVib = (Vibrator)
+		 * this.getSystemService(VIBRATOR_SERVICE);
+		 * myVib.vibrate(Long.MAX_VALUE);
+		 */
 	}
 
 	private final BroadcastReceiver mHandleMessageReceiver = new BroadcastReceiver() {
@@ -113,17 +128,18 @@ public class MainActivity extends Activity {
 			/* Overwrite the volume settings to set max volume. */
 			AudioManager audio = (AudioManager) context
 					.getSystemService(Context.AUDIO_SERVICE);
-			int max = audio
-					.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+			int max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
 			audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
 			audio.setStreamVolume(AudioManager.STREAM_MUSIC, max,
 					AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
 			/* Play ring tone. */
 			MediaPlayer player = MediaPlayer.create(getApplicationContext(),
 					Settings.System.DEFAULT_NOTIFICATION_URI);
+			player.setLooping(true);
 			player.start();
-			
-			Vibrator myVib = (Vibrator) getApplicationContext().getSystemService(VIBRATOR_SERVICE);
+
+			Vibrator myVib = (Vibrator) getApplicationContext()
+					.getSystemService(VIBRATOR_SERVICE);
 			myVib.vibrate(10000);
 
 			/* Showing received message. */
@@ -138,6 +154,9 @@ public class MainActivity extends Activity {
 
 	@Override
 	protected void onDestroy() {
+		Vibrator myVib = (Vibrator) getApplicationContext().getSystemService(
+				VIBRATOR_SERVICE);
+		myVib.cancel();
 		if (mRegisterTask != null) {
 			mRegisterTask.cancel(true);
 		}
@@ -155,6 +174,57 @@ public class MainActivity extends Activity {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
+	}
+
+	public void setupList() {
+		ExpandableListView ExpandList = (ExpandableListView) findViewById(R.id.ExpList);
+		ArrayList<ExpandListGroup> ExpListItems = SetStandardGroups();
+		ExpandListAdapter ExpAdapter = new ExpandListAdapter(MainActivity.this,
+				ExpListItems);
+		ExpandList.setAdapter(ExpAdapter);
+		ExpandList.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+	}
+
+	public ArrayList<ExpandListGroup> SetStandardGroups() {
+		ArrayList<ExpandListGroup> list = new ArrayList<ExpandListGroup>();
+		ArrayList<ExpandListChild> list2 = new ArrayList<ExpandListChild>();
+		ExpandListGroup gru1 = new ExpandListGroup();
+		gru1.setName("Cities");
+		String[] cities = {"London", "Paris", "Birmingham", "Warsaw", "Berlin", "New York", "Manchester"};
+		for (String city : cities) {
+			ExpandListChild ch = new ExpandListChild();
+			ch.setName(city);
+			ch.setTag(null);
+			list2.add(ch);
+		}
+		gru1.setItems(list2);
+		list2 = new ArrayList<ExpandListChild>();
+		ExpandListGroup gru2 = new ExpandListGroup();
+		gru2.setName("Universities");
+		String[] unis = {"Imperial", "UCL", "Newcastle", "Leeds", "Manchester", "Oxford", "City", "Some Art One"};
+		for (String uni : unis) {
+			ExpandListChild ch = new ExpandListChild();
+			ch.setName(uni);
+			ch.setTag(null);
+			list2.add(ch);
+		}
+		gru2.setItems(list2);
+		list2 = new ArrayList<ExpandListChild>();
+		ExpandListGroup gru3 = new ExpandListGroup();
+		gru3.setName("Transport");
+		String[] trans = {"Tube", "West Midlands", "Virgin Trains", "London Buses", "Heathrow", "Gatwick", "Luton", "New York"};
+		for (String tran : trans) {
+			ExpandListChild ch = new ExpandListChild();
+			ch.setName(tran);
+			ch.setTag(null);
+			list2.add(ch);
+		}
+		gru3.setItems(list2);
+		list2 = new ArrayList<ExpandListChild>();
+		list.add(gru1);
+		list.add(gru2);
+		list.add(gru3);
+		return list;
 	}
 
 }

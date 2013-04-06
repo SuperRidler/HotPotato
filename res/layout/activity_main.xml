@@ -8,14 +8,12 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context=".MainActivity" >
 
-    <TextView
+    <ExpandableListView
+        android:id="@+id/ExpList"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/hello_world" />
-    <TextView
-        android:id="@+id/messageLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="" />
+        android:layout_alignLeft="@+id/subscribedLabel"
+        android:groupIndicator="@null" >
+    </ExpandableListView>
 
 </RelativeLayout>
