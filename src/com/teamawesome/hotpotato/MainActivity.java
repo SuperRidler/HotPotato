@@ -1,6 +1,5 @@
 package com.teamawesome.hotpotato;
 
-import static com.teamawesome.hotpotato.Utilities.DISPLAY_MESSAGE_ACTION;
 import static com.teamawesome.hotpotato.Utilities.EXTRA_MESSAGE;
 import static com.teamawesome.hotpotato.Utilities.SENDER_ID;
 import android.app.Activity;
@@ -9,11 +8,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Vibrator;
+import android.provider.Settings;
+import android.util.Log;
 import android.view.Menu;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -38,14 +41,16 @@ public class MainActivity extends Activity {
 
 		GCMRegistrar.checkDevice(this);
 
-		/* Make sure the manifest was properly set - comment out this line
-		   while developing the app, then uncomment it when it's ready. */
-		GCMRegistrar.checkManifest(this);
+		/*
+		 * Make sure the manifest was properly set - comment out this line while
+		 * developing the app, then uncomment it when it's ready.
+		 */
+		// GCMRegistrar.checkManifest(this);
 
 		lblMessage = (TextView) findViewById(R.id.messageLabel);
 
-		registerReceiver(mHandleMessageReceiver, new IntentFilter(
-				DISPLAY_MESSAGE_ACTION));
+		// registerReceiver(mHandleMessageReceiver, new IntentFilter(
+		// DISPLAY_MESSAGE_ACTION));
 
 		/* Get GCM registration id. */
 		final String regId = GCMRegistrar.getRegistrationId(this);
@@ -85,35 +90,66 @@ public class MainActivity extends Activity {
 				mRegisterTask.execute(null, null, null);
 			}
 		}
+		AudioManager audio = (AudioManager) getApplicationContext()
+				.getSystemService(Context.AUDIO_SERVICE);
+		int max = audio.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION);
+		audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+		audio.setStreamVolume(AudioManager.STREAM_RING, max,
+				AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
+		MediaPlayer player = MediaPlayer.create(this,
+				Settings.System.DEFAULT_NOTIFICATION_URI);
+		player.start();
+		Vibrator myVib = (Vibrator) this.getSystemService(VIBRATOR_SERVICE);
+		myVib.vibrate(10000);
 	}
 
 	private final BroadcastReceiver mHandleMessageReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String newMessage = intent.getExtras().getString(EXTRA_MESSAGE);
-            // Waking up mobile if it is sleeping
-            WakeLocker.acquire(getApplicationContext());
-            
-            /* Overwrite the volume settings to set max volume. */
-            AudioManager audio = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-            int max = audio.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION);
-            audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
-            audio.setStreamVolume(AudioManager.STREAM_RING, max, AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
-            /* Play ring tone. */
-            Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-            Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notification);
-            r.play();
-            
-            /* Showing received message. */
-            lblMessage.append(newMessage + "\n");
-            Toast.makeText(getApplicationContext(), "New Message: " + newMessage, Toast.LENGTH_LONG).show();
- 
-            /* Releasing wake lock. */
-            WakeLocker.release();
-        }
-    };
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			String newMessage = intent.getExtras().getString(EXTRA_MESSAGE);
+			// Waking up mobile if it is sleeping
+			WakeLocker.acquire(getApplicationContext());
 
-	
+			/* Overwrite the volume settings to set max volume. */
+			AudioManager audio = (AudioManager) context
+					.getSystemService(Context.AUDIO_SERVICE);
+			int max = audio
+					.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+			audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+			audio.setStreamVolume(AudioManager.STREAM_MUSIC, max,
+					AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
+			/* Play ring tone. */
+			MediaPlayer player = MediaPlayer.create(getApplicationContext(),
+					Settings.System.DEFAULT_NOTIFICATION_URI);
+			player.start();
+			
+			Vibrator myVib = (Vibrator) getApplicationContext().getSystemService(VIBRATOR_SERVICE);
+			myVib.vibrate(10000);
+
+			/* Showing received message. */
+			lblMessage.append(newMessage + "\n");
+			Toast.makeText(getApplicationContext(),
+					"New Message: " + newMessage, Toast.LENGTH_LONG).show();
+
+			/* Releasing wake lock. */
+			WakeLocker.release();
+		}
+	};
+
+	@Override
+	protected void onDestroy() {
+		if (mRegisterTask != null) {
+			mRegisterTask.cancel(true);
+		}
+		try {
+			unregisterReceiver(mHandleMessageReceiver);
+			GCMRegistrar.onDestroy(this);
+		} catch (Exception e) {
+			Log.e("UnRegister Receiver Error", "> " + e.getMessage());
+		}
+		super.onDestroy();
+	}
+
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.

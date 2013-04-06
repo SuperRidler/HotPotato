@@ -17,6 +17,7 @@ import java.util.Random;
  
 import android.content.Context;
 import android.util.Log;
+import android.widget.Toast;
  
 import com.google.android.gcm.GCMRegistrar;
  
@@ -30,6 +31,7 @@ public final class ServerUtilities {
      *
      */
     static void register(final Context context, final String regId) {
+    	Utilities.displayMessage(context, "Attempting to register.");
         Log.i(TAG, "registering device (regId = " + regId + ")");
         String serverUrl = SERVER_URL;
         Map<String, String> params = new HashMap<String, String>();
