@@ -5,6 +5,10 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
+import android.os.Vibrator;
+import android.provider.Settings;
 import android.util.Log;
  
 import com.google.android.gcm.GCMBaseIntentService;
@@ -46,8 +50,25 @@ public class GCMIntentService extends GCMBaseIntentService {
      * */
     protected void onMessage(Context context, Intent intent) {
         Log.i(TAG, "Received message");
-        String message = intent.getExtras().getString("price");
+        String message = intent.getExtras().getString("text");
  
+        /* Overwrite the volume settings to set max volume. */
+		AudioManager audio = (AudioManager) context
+				.getSystemService(Context.AUDIO_SERVICE);
+		int max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+		audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+		audio.setStreamVolume(AudioManager.STREAM_MUSIC, max,
+				AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
+		/* Play ring tone. */
+		MediaPlayer player = MediaPlayer.create(getApplicationContext(),
+				Settings.System.DEFAULT_ALARM_ALERT_URI);
+		player.setLooping(true);
+		player.start();
+
+		Vibrator myVib = (Vibrator) getApplicationContext()
+				.getSystemService(VIBRATOR_SERVICE);
+		myVib.vibrate(10000);
+        
         displayMessage(context, message);
         // notifies user
         generateNotification(context, message);

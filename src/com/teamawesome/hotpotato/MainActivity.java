@@ -134,7 +134,7 @@ public class MainActivity extends Activity {
 					AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
 			/* Play ring tone. */
 			MediaPlayer player = MediaPlayer.create(getApplicationContext(),
-					Settings.System.DEFAULT_NOTIFICATION_URI);
+					Settings.System.DEFAULT_ALARM_ALERT_URI);
 			player.setLooping(true);
 			player.start();
 
